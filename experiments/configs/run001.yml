@@ -1,0 +1,16 @@
+description: ModelNN
+exp_name: 'atma-sansan'
+run_name: 'run001'
+fe_name: 'fe000'
+data:
+  sample_submission: '../input/submission.csv'
+cols_definition:
+  categorical_col: [
+  ]
+model_name: 'ModelNN'
+params: {
+  'nb_epoch': 100,
+  'patience': 10,
+  'dropout': 0.4,
+}
+evaluation_metric: 'log_loss'
