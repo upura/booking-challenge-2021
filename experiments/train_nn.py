@@ -11,6 +11,15 @@ from src.utils import seed_everything
 from src.runner import CustomRunner
 
 
+def calc_score(y_train, y_pred):
+    score = 0
+    for y, p in zip(y_train, y_pred):
+        correct = y in p
+        score += int(correct)
+    score /= len(y_train)
+    return score
+
+
 if __name__ == '__main__':
 
     run_name = 'nn000'
@@ -37,18 +46,17 @@ if __name__ == '__main__':
     test = train_test[~train_test['row_num'].isnull()]
 
     train_trips = train.groupby('utrip_id')['city_id'].unique().reset_index()
-    test_trips = test.groupby('utrip_id')['city_id'].unique().reset_index()
+    test_trips = test.query('city_id!=0').groupby('utrip_id')['city_id'].unique().reset_index()
 
-    X_train = train.groupby('utrip_id')[categorical_cols].first().reset_index()
-    X_test = test.groupby('utrip_id')[categorical_cols].first().reset_index()
+    X_train = train.groupby('utrip_id')[categorical_cols].last().reset_index()
+    X_test = test.query('city_id!=0').groupby('utrip_id')[categorical_cols].last().reset_index()
 
     X_train['city_id'] = train_trips['city_id']
     X_test['city_id'] = test_trips['city_id']
 
     X_train['n_trips'] = X_train['city_id'].map(lambda x: len(x))
-    X_test['n_trips'] = X_test['city_id'].map(lambda x: len(x))
     X_train = X_train.query('n_trips > 2').sort_values('n_trips').reset_index(drop=True)
-    X_test = X_test.sort_values('n_trips').reset_index(drop=True)
+    X_test = X_test.reset_index(drop=True)
 
     cv = StratifiedKFold(n_splits=5, shuffle=False)
     oof_preds = np.zeros(len(X_train))
@@ -56,11 +64,9 @@ if __name__ == '__main__':
     cv_scores = []
 
     test_dataset = BookingDataset(X_test, is_train=False)
-    collate = MyCollator(is_train=False, percentile=100)
     test_loader = DataLoader(test_dataset,
                              shuffle=False,
-                             batch_size=32,
-                             collate_fn=collate)
+                             batch_size=1)
 
     for fold_id, (tr_idx, va_idx) in enumerate(cv.split(X_train,
                                                         pd.cut(X_train['n_trips'], 5, labels=False))):
@@ -74,13 +80,11 @@ if __name__ == '__main__':
             collate = MyCollator(percentile=100)
             train_loader = DataLoader(train_dataset,
                                       shuffle=False,
-                                      batch_size=32,
+                                      batch_size=128,
                                       collate_fn=collate)
-            collate = MyCollator(percentile=100)
             valid_loader = DataLoader(valid_dataset,
                                       shuffle=False,
-                                      batch_size=32,
-                                      collate_fn=collate)
+                                      batch_size=1)
 
             loaders = {'train': train_loader, 'valid': valid_loader}
             runner = CustomRunner(device=device)
@@ -89,7 +93,7 @@ if __name__ == '__main__':
             criterion = torch.nn.CrossEntropyLoss()
             optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
             scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=30, eta_min=1e-6)
-            logdir = f'../output/logdir_{run_name}/fold{fold_id}'
+            logdir = f'logdir_{run_name}/fold{fold_id}'
             runner.train(
                 model=model,
                 criterion=criterion,
@@ -101,29 +105,23 @@ if __name__ == '__main__':
                 verbose=True,
             )
 
-            oof_train = np.concatenate(list(map(lambda x: x.cpu().numpy(),
-                                                runner.predict_loader(
-                                                loader=valid_loader,
-                                                resume=f'{logdir}/checkpoints/best.pth',
-                                                model=model,),)))
+            oof_train = np.array(list(map(lambda x: x.cpu().numpy()[-1, :],
+                                          runner.predict_loader(
+                                              loader=valid_loader,
+                                              resume=f'{logdir}/checkpoints/best.pth',
+                                              model=model,),)))
 
             print(oof_train.shape)
-            print(oof_train)
-            np.save('oof_train', oof_train)
+            np.save(f'oof_train_fold{fold_id}', oof_train)
 
-            # oof_preds[va_idx] = pred
-            # y_pred_oof = (pred > 0.5).astype(int)
-            # score = accuracy_score(y_val, y_pred_oof)
-            # cv_scores.append(score)
-            # print('score', score)
+            y_train = X_train['city_id'].map(lambda x: x[-1])
+            _oof = np.argsort(oof_train, axis=1)[:, -4:]
+            print('acc@4', calc_score(y_train, _oof))
 
-            pred = np.concatenate(list(map(lambda x: x.cpu().numpy(),
-                                           runner.predict_loader(
-                                           loader=test_loader,
-                                           resume=f'{logdir}/checkpoints/best.pth',
-                                           model=model,),)))
+            pred = np.array(list(map(lambda x: x.cpu().numpy()[-1, :],
+                                     runner.predict_loader(
+                                         loader=test_loader,
+                                         resume=f'{logdir}/checkpoints/best.pth',
+                                         model=model,),)))
             print(pred.shape)
-            print(pred)
-            np.save('y_pred', pred)
-
-            # test_preds += pred / 5
+            np.save(f'y_pred_fold{fold_id}', pred)

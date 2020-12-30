@@ -30,7 +30,7 @@ def load_train_test():
                                'total_rows',    # test only
                                'city_id',
                                'hotel_country'
-                           ]).sort_values(by=['utrip_id', 'checkin'])
+                           ]).sort_values(by=['utrip_id', 'row_num'])
     return pd.concat([train_set, test_set], sort=False)
 
 

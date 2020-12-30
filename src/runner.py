@@ -1,4 +1,5 @@
 from catalyst.dl import Runner
+from catalyst.dl.utils import any2device
 import torch
 
 
@@ -15,7 +16,7 @@ class CustomRunner(Runner):
 
     @torch.no_grad()
     def predict_batch(self, batch):
-        batch = self._batch2device(batch, self.device)
+        batch = any2device(batch, self.device)
         if len(batch) == 2:
             x, cat = batch
         elif len(batch) == 3:
