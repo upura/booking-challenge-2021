@@ -1,3 +1,5 @@
+import gc
+
 import numpy as np
 import pandas as pd
 from sklearn.model_selection import StratifiedKFold
@@ -9,15 +11,6 @@ from src.datasets import load_train_test, BookingDataset, MyCollator
 from src.models import BookingNN
 from src.utils import seed_everything
 from src.runner import CustomRunner
-
-
-def calc_score(y_train, y_pred):
-    score = 0
-    for y, p in zip(y_train, y_pred):
-        correct = y in p
-        score += int(correct)
-    score /= len(y_train)
-    return score
 
 
 if __name__ == '__main__':
@@ -59,18 +52,18 @@ if __name__ == '__main__':
     X_test = X_test.reset_index(drop=True)
 
     cv = StratifiedKFold(n_splits=5, shuffle=False)
-    oof_preds = np.zeros(len(X_train))
-    test_preds = np.zeros(len(X_test))
-    cv_scores = []
 
     test_dataset = BookingDataset(X_test, is_train=False)
     test_loader = DataLoader(test_dataset,
                              shuffle=False,
                              batch_size=1)
 
+    del train_test, train, test, X_test
+    gc.collect()
+
     for fold_id, (tr_idx, va_idx) in enumerate(cv.split(X_train,
                                                         pd.cut(X_train['n_trips'], 5, labels=False))):
-        if fold_id == 0:
+        if fold_id in (0,):
             X_tr = X_train.loc[tr_idx, :]
             X_val = X_train.loc[va_idx, :]
 
@@ -80,7 +73,7 @@ if __name__ == '__main__':
             collate = MyCollator(percentile=100)
             train_loader = DataLoader(train_dataset,
                                       shuffle=False,
-                                      batch_size=128,
+                                      batch_size=256,
                                       collate_fn=collate)
             valid_loader = DataLoader(valid_dataset,
                                       shuffle=False,
@@ -101,22 +94,20 @@ if __name__ == '__main__':
                 scheduler=scheduler,
                 loaders=loaders,
                 logdir=logdir,
-                num_epochs=1,
+                num_epochs=5,
                 verbose=True,
             )
 
-            oof_train = np.array(list(map(lambda x: x.cpu().numpy()[-1, :],
-                                          runner.predict_loader(
-                                              loader=valid_loader,
-                                              resume=f'{logdir}/checkpoints/best.pth',
-                                              model=model,),)))
-
-            print(oof_train.shape)
-            np.save(f'oof_train_fold{fold_id}', oof_train)
-
-            y_train = X_train['city_id'].map(lambda x: x[-1])
-            _oof = np.argsort(oof_train, axis=1)[:, -4:]
-            print('acc@4', calc_score(y_train, _oof))
+            score = 0
+            y_val = X_val['city_id'].map(lambda x: x[-1])
+            for loop_i, prediction in enumerate(runner.predict_loader(
+                                                loader=valid_loader,
+                                                resume=f'{logdir}/checkpoints/best.pth',
+                                                model=model,)):
+                correct = y_val.values[loop_i] in np.argsort(prediction.cpu().numpy()[-1, :])[-4:]
+                score += int(correct)
+            score /= len(y_val)
+            print('acc@4', score)
 
             pred = np.array(list(map(lambda x: x.cpu().numpy()[-1, :],
                                      runner.predict_loader(
