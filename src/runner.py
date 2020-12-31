@@ -1,3 +1,4 @@
+from catalyst import metrics
 from catalyst.dl import Runner
 from catalyst.dl.utils import any2device
 import torch
@@ -6,9 +7,12 @@ import torch
 class CustomRunner(Runner):
     def _handle_batch(self, batch):
         x, y, cat = batch
-        out, hidden = self.model(x)
+        out, hidden = self.model(x, cat)
         loss = self.criterion(out, y.view(y.size(0) * y.size(1)))
-        self.batch_metrics = {'loss': loss}
+        accuracy01, accuracy04 = metrics.accuracy(out, y.view(y.size(0) * y.size(1)), topk=(1, 4))
+        self.batch_metrics.update(
+            {"loss": loss, "accuracy01": accuracy01, "accuracy04": accuracy04}
+        )
         if self.is_train_loader:
             loss.backward()
             self.optimizer.step()
@@ -23,5 +27,5 @@ class CustomRunner(Runner):
             x, y, cat = batch
         else:
             raise RuntimeError
-        out, hidden = self.model(x)
+        out, hidden = self.model(x, cat)
         return out
