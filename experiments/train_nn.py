@@ -27,6 +27,8 @@ if __name__ == '__main__':
     ]
 
     train_test = load_train_test()
+    cat_dims = [int(train_test[col].nunique()) for col in categorical_cols]
+    emb_dims = [(x, min(50, (x + 1) // 2)) for x in cat_dims]
 
     target_le = preprocessing.LabelEncoder()
     train_test['city_id'] = target_le.fit_transform(train_test['city_id'])

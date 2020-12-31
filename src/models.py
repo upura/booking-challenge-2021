@@ -1,3 +1,4 @@
+import torch
 from torch import nn
 
 
@@ -13,11 +14,16 @@ class BookingNN(nn.Module):
         super().__init__()
         self.drop = nn.Dropout(dropout)
         self.embedding = nn.Embedding(vocab_size, emb_dim)
-        self.rnn = nn.RNN(input_size=emb_dim,
+        self.rnn = nn.RNN(input_size=emb_dim + 155,
                           hidden_size=rnn_dim,
                           num_layers=num_layers,
                           dropout=rnn_dropout)
         self.dense = nn.Linear(rnn_dim, vocab_size)
+        """
+        cat_dims = [int(train_test[col].nunique()) for col in categorical_cols]
+        emb_dims = [(x, min(50, (x + 1) // 2)) for x in cat_dims]
+        """
+        self.emb_layers = nn.ModuleList([nn.Embedding(x, y) for x, y in emb_dims])
 
         if tie_weight:
             self.dense.weight = self.embedding.weight
@@ -30,7 +36,11 @@ class BookingNN(nn.Module):
         self.rnn_dropout = rnn_dropout
         self.tie_weight = tie_weight
 
-    def forward(self, x, h0=None):
-        out, hidden = self.rnn(self.drop(self.embedding(x)), h0)
-        out = self.dense(self.drop(out.view(out.size(0) * out.size(1), out.size(2))))
-        return out, hidden
+    def forward(self, x_seq, x_cat, h0=None):
+        out_c = [emb_layer(x_cat[:, i]) for i, emb_layer in enumerate(self.emb_layers)]
+        out_c = torch.cat(out_c, axis=1)
+        out_c = out_c.repeat(x_seq.shape[1], 1, 1)
+        out_c = out_c.view(out_c.shape[1], out_c.shape[0], out_c.shape[2])
+        out_s, hidden = self.rnn(torch.cat([self.drop(self.embedding(x_seq)), out_c], axis=2), h0)
+        out_s = self.dense(self.drop(out_s.view(out_s.size(0) * out_s.size(1), out_s.size(2))))
+        return out_s, hidden
