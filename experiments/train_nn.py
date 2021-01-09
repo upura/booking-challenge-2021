@@ -20,10 +20,10 @@ if __name__ == '__main__':
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     categorical_cols = [
         'user_id',
-        'device_class',
-        'affiliate_id',
+        # 'device_class',
+        # 'affiliate_id',
         'booker_country',
-        'hotel_country'
+        # 'hotel_country'
     ]
 
     train_test = load_train_test()
@@ -96,25 +96,14 @@ if __name__ == '__main__':
                 scheduler=scheduler,
                 loaders=loaders,
                 logdir=logdir,
-                num_epochs=5,
+                num_epochs=10,
                 verbose=True,
             )
-
-            score = 0
-            y_val = X_val['city_id'].map(lambda x: x[-1])
-            for loop_i, prediction in enumerate(runner.predict_loader(
-                                                loader=valid_loader,
-                                                resume=f'{logdir}/checkpoints/best.pth',
-                                                model=model,)):
-                correct = y_val.values[loop_i] in np.argsort(prediction.cpu().numpy()[-1, :])[-4:]
-                score += int(correct)
-            score /= len(y_val)
-            print('acc@4', score)
 
             pred = np.array(list(map(lambda x: x.cpu().numpy()[-1, :],
                                      runner.predict_loader(
                                          loader=test_loader,
                                          resume=f'{logdir}/checkpoints/best.pth',
                                          model=model,),)))
-            print(pred.shape)
+
             np.save(f'y_pred_fold{fold_id}', pred)
