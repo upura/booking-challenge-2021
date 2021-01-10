@@ -99,11 +99,3 @@ if __name__ == '__main__':
                 num_epochs=10,
                 verbose=True,
             )
-
-            pred = np.array(list(map(lambda x: x.cpu().numpy()[-1, :],
-                                     runner.predict_loader(
-                                         loader=test_loader,
-                                         resume=f'{logdir}/checkpoints/best.pth',
-                                         model=model,),)))
-
-            np.save(f'y_pred_fold{fold_id}', pred)
