@@ -49,7 +49,7 @@ if __name__ == '__main__':
                              shuffle=False,
                              batch_size=1)
 
-    del train_test, test, X_test
+    del train_test, test, test_trips
     gc.collect()
 
     model_paths = [
