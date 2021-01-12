@@ -69,6 +69,10 @@ if __name__ == '__main__':
             X_tr = X_train.loc[tr_idx, :]
             X_val = X_train.loc[va_idx, :]
 
+            X_aug = X_tr.copy()
+            X_aug['city_id'] = X_aug['city_id'].map(lambda x: x[::-1])
+            X_tr = pd.concat([X_tr, X_aug], axis=0).sort_values('n_trips')
+
             train_dataset = BookingDataset(X=X_tr)
             valid_dataset = BookingDataset(X=X_val)
 

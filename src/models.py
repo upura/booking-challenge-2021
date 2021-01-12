@@ -24,8 +24,8 @@ class BookingNN(nn.Module):
                            num_layers=num_layers,
                            batch_first=True,
                            dropout=rnn_dropout,
-                           bidirectional=True)
-        self.dense = nn.Linear(rnn_dim * 2, vocab_size)
+                           bidirectional=False)
+        self.dense = nn.Linear(rnn_dim, vocab_size)
 
         if tie_weight:
             self.dense.weight = self.embedding.weight
