@@ -18,15 +18,21 @@ if __name__ == '__main__':
     run_name = 'nn000'
     seed_everything(0)
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+
+    train_test = load_train_test()
+    train_test['checkin_year'] = pd.to_datetime(train_test['checkin']).dt.year
+    train_test['checkin_month'] = pd.to_datetime(train_test['checkin']).dt.month
+
     categorical_cols = [
         'user_id',
         # 'device_class',
         # 'affiliate_id',
         'booker_country',
-        # 'hotel_country'
+        # 'hotel_country',
+        'checkin_year',
+        'checkin_month'
     ]
 
-    train_test = load_train_test()
     cat_dims = [int(train_test[col].nunique()) for col in categorical_cols]
     emb_dims = [(x, min(50, (x + 1) // 2)) for x in cat_dims]
 
@@ -37,14 +43,20 @@ if __name__ == '__main__':
         le = preprocessing.LabelEncoder()
         train_test[c] = le.fit_transform(train_test[c].astype(str).fillna('unk').values)
 
+    train_test['duration'] = (pd.to_datetime(train_test['checkout']) - pd.to_datetime(train_test['checkin'])).dt.days
+    prep = preprocessing.QuantileTransformer(output_distribution="normal")
+    train_test['duration'] = prep.fit_transform(train_test[['duration']]).reshape(-1)
+
+    numerical_cols = ['duration']
+
     train = train_test[train_test['row_num'].isnull()]
     test = train_test[~train_test['row_num'].isnull()]
 
-    train_trips = train[train['city_id'] != train['city_id'].shift(1)].groupby('utrip_id')['city_id'].apply(lambda x: x.values).reset_index()
-    test_trips = test[test['city_id'] != test['city_id'].shift(1)].query('city_id!=0').groupby('utrip_id')['city_id'].apply(lambda x: x.values).reset_index()
+    train_trips = train.groupby('utrip_id')['city_id'].unique().reset_index()
+    test_trips = test.query('city_id!=0').groupby('utrip_id')['city_id'].unique().reset_index()
 
-    X_train = train[train['city_id'] != train['city_id'].shift(1)].groupby('utrip_id')[categorical_cols].last().reset_index()
-    X_test = test[test['city_id'] != test['city_id'].shift(1)].query('city_id!=0').groupby('utrip_id')[categorical_cols].last().reset_index()
+    X_train = train.groupby('utrip_id')[categorical_cols + numerical_cols].last().reset_index()
+    X_test = test.query('city_id!=0').groupby('utrip_id')[categorical_cols + numerical_cols].last().reset_index()
 
     X_train['city_id'] = train_trips['city_id']
     X_test['city_id'] = test_trips['city_id']
@@ -55,7 +67,10 @@ if __name__ == '__main__':
 
     cv = StratifiedKFold(n_splits=5, shuffle=False)
 
-    test_dataset = BookingDataset(X_test, is_train=False)
+    test_dataset = BookingDataset(X_test,
+                                  is_train=False,
+                                  categorical_cols=categorical_cols,
+                                  numerical_cols=numerical_cols)
     test_loader = DataLoader(test_dataset,
                              shuffle=False,
                              batch_size=1)
@@ -69,12 +84,8 @@ if __name__ == '__main__':
             X_tr = X_train.loc[tr_idx, :]
             X_val = X_train.loc[va_idx, :]
 
-            X_aug = X_tr.copy()
-            X_aug['city_id'] = X_aug['city_id'].map(lambda x: x[::-1])
-            X_tr = pd.concat([X_tr, X_aug], axis=0).sort_values('n_trips')
-
-            train_dataset = BookingDataset(X=X_tr)
-            valid_dataset = BookingDataset(X=X_val)
+            train_dataset = BookingDataset(X=X_tr, categorical_cols=categorical_cols, numerical_cols=numerical_cols)
+            valid_dataset = BookingDataset(X=X_val, categorical_cols=categorical_cols, numerical_cols=numerical_cols)
 
             collate = MyCollator(percentile=100)
             train_loader = DataLoader(train_dataset,

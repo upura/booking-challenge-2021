@@ -5,7 +5,7 @@ import torch
 
 
 def load_train_test():
-    train_set = pd.read_csv('../input/booking_train_set.csv',
+    train_set = pd.read_csv('../input/booking/booking_train_set.csv',
                             usecols=[
                                 'user_id',
                                 'checkin',
@@ -17,7 +17,7 @@ def load_train_test():
                                 'hotel_country',
                                 'utrip_id'
                             ]).sort_values(by=['utrip_id', 'checkin'])
-    test_set = pd.read_csv('../input/sample_test_set.csv',
+    test_set = pd.read_csv('../input/booking/booking_test_set.csv',
                            usecols=[
                                'user_id',
                                'checkin',
@@ -35,23 +35,28 @@ def load_train_test():
 
 
 class BookingDataset:
-    def __init__(self, X, is_train=True):
+    def __init__(self, X, is_train=True, categorical_cols=[], numerical_cols=[]):
         self.X = X
         self.is_train = is_train
+        self.categorical_cols = categorical_cols
+        self.numerical_cols = numerical_cols
 
     def __len__(self):
         return len(self.X)
 
     def __getitem__(self, i):
         x_seq = self.X['city_id'].values[i]
-        x_cat = self.X.drop(['utrip_id', 'city_id'], axis=1).iloc[i].values
+        x_cat = self.X[self.categorical_cols].iloc[i].values
+        x_num = self.X[self.numerical_cols].iloc[i].values
         return (
             x_seq[:-1],
             x_seq[1:],
-            x_cat
+            x_cat,
+            x_num
         ) if self.is_train else (
             x_seq,
-            x_cat
+            x_cat,
+            x_num
         )
 
 
@@ -65,22 +70,27 @@ class MyCollator(object):
             data = [item[0] for item in batch]
             target = [item[1] for item in batch]
             cats = [item[2] for item in batch]
+            nums = [item[3] for item in batch]
         else:
             data = [item[0] for item in batch]
             cats = [item[1] for item in batch]
+            nums = [item[2] for item in batch]
         lens = [len(x) for x in data]
         max_len = np.percentile(lens, self.percentile)
         data = sequence.pad_sequences(data, maxlen=int(max_len))
         data = torch.tensor(data, dtype=torch.long)
         cats = torch.tensor(cats, dtype=torch.long)
+        nums = torch.tensor(nums, dtype=torch.float)
         if self.is_train:
             target = sequence.pad_sequences(target, maxlen=int(max_len))
             target = torch.tensor(target, dtype=torch.long)
         return (
             data,
             target,
-            cats
+            cats,
+            nums
         ) if self.is_train else (
             data,
-            cats
+            cats,
+            nums
         )

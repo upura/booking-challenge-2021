@@ -6,8 +6,8 @@ import torch
 
 class CustomRunner(Runner):
     def _handle_batch(self, batch):
-        x, y, cat = batch
-        out, hidden = self.model(x, cat)
+        x, y, cat, num = batch
+        out, hidden = self.model(x, cat, num)
         loss = self.criterion(out, y.view(y.size(0) * y.size(1)))
         accuracy01, accuracy04 = metrics.accuracy(out, y.view(y.size(0) * y.size(1)), topk=(1, 4))
         self.batch_metrics.update(
@@ -21,11 +21,11 @@ class CustomRunner(Runner):
     @torch.no_grad()
     def predict_batch(self, batch):
         batch = any2device(batch, self.device)
-        if len(batch) == 2:
-            x, cat = batch
-        elif len(batch) == 3:
-            x, y, cat = batch
+        if len(batch) == 3:
+            x, cat, num = batch
+        elif len(batch) == 4:
+            x, y, cat, num = batch
         else:
             raise RuntimeError
-        out, hidden = self.model(x, cat)
+        out, hidden = self.model(x, cat, num)
         return out
