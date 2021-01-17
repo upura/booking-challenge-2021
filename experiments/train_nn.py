@@ -87,14 +87,16 @@ if __name__ == '__main__':
             train_dataset = BookingDataset(X=X_tr, categorical_cols=categorical_cols, numerical_cols=numerical_cols)
             valid_dataset = BookingDataset(X=X_val, categorical_cols=categorical_cols, numerical_cols=numerical_cols)
 
-            collate = MyCollator(percentile=100)
+            train_collate = MyCollator(percentile=100)
             train_loader = DataLoader(train_dataset,
                                       shuffle=False,
                                       batch_size=256,
-                                      collate_fn=collate)
+                                      collate_fn=train_collate)
+            valid_collate = MyCollator(percentile=100, mode="valid")
             valid_loader = DataLoader(valid_dataset,
                                       shuffle=False,
-                                      batch_size=1)
+                                      batch_size=1,
+                                      collate_fn=valid_collate)
 
             loaders = {'train': train_loader, 'valid': valid_loader}
             runner = CustomRunner(device=device)
@@ -111,6 +113,6 @@ if __name__ == '__main__':
                 scheduler=scheduler,
                 loaders=loaders,
                 logdir=logdir,
-                num_epochs=10,
+                num_epochs=1,
                 verbose=True,
             )

@@ -61,12 +61,12 @@ class BookingDataset:
 
 
 class MyCollator(object):
-    def __init__(self, is_train=True, percentile=100):
-        self.is_train = is_train
+    def __init__(self, mode="train", percentile=100):
+        self.mode = mode
         self.percentile = percentile
 
     def __call__(self, batch):
-        if self.is_train:
+        if self.mode in ("train", "valid"):
             data = [item[0] for item in batch]
             target = [item[1] for item in batch]
             cats = [item[2] for item in batch]
@@ -77,11 +77,12 @@ class MyCollator(object):
             nums = [item[2] for item in batch]
         lens = [len(x) for x in data]
         max_len = np.percentile(lens, self.percentile)
-        data = sequence.pad_sequences(data, maxlen=int(max_len))
+        if self.mode in ("train"):
+            data = sequence.pad_sequences(data, maxlen=int(max_len))
         data = torch.tensor(data, dtype=torch.long)
         cats = torch.tensor(cats, dtype=torch.long)
         nums = torch.tensor(nums, dtype=torch.float)
-        if self.is_train:
+        if self.mode in ("train", "valid"):
             target = sequence.pad_sequences(target, maxlen=int(max_len))
             target = torch.tensor(target, dtype=torch.long)
         return (
@@ -89,7 +90,7 @@ class MyCollator(object):
             target,
             cats,
             nums
-        ) if self.is_train else (
+        ) if self.mode in ("train", "valid") else (
             data,
             cats,
             nums
