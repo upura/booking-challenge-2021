@@ -62,7 +62,7 @@ if __name__ == '__main__':
     X_test['city_id'] = test_trips['city_id']
 
     X_train['n_trips'] = X_train['city_id'].map(lambda x: len(x))
-    X_train = X_train.query('n_trips > 2').sort_values('n_trips').reset_index(drop=True)
+    X_train = X_train.query('n_trips > 3').sort_values('n_trips').reset_index(drop=True)
     X_test = X_test.reset_index(drop=True)
 
     cv = StratifiedKFold(n_splits=5, shuffle=False)
