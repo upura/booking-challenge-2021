@@ -52,8 +52,8 @@ if __name__ == '__main__':
     train = train_test[train_test['row_num'].isnull()]
     test = train_test[~train_test['row_num'].isnull()]
 
-    train_trips = train.groupby('utrip_id')['city_id'].unique().reset_index()
-    test_trips = test.query('city_id!=0').groupby('utrip_id')['city_id'].unique().reset_index()
+    train_trips = train[train['city_id'] != train['city_id'].shift(1)].groupby('utrip_id')['city_id'].apply(lambda x: x.values).reset_index()
+    test_trips = test[test['city_id'] != test['city_id'].shift(1)].query('city_id!=0').groupby('utrip_id')['city_id'].apply(lambda x: x.values).reset_index()
 
     X_train = train.groupby('utrip_id')[categorical_cols + numerical_cols].last().reset_index()
     X_test = test.query('city_id!=0').groupby('utrip_id')[categorical_cols + numerical_cols].last().reset_index()
