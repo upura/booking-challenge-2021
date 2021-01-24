@@ -1,6 +1,5 @@
 import gc
 
-import numpy as np
 import pandas as pd
 from sklearn.model_selection import StratifiedKFold
 from sklearn import preprocessing
@@ -54,12 +53,16 @@ if __name__ == '__main__':
 
     train_trips = train[train['city_id'] != train['city_id'].shift(1)].groupby('utrip_id')['city_id'].apply(lambda x: x.values).reset_index()
     test_trips = test[test['city_id'] != test['city_id'].shift(1)].query('city_id!=0').groupby('utrip_id')['city_id'].apply(lambda x: x.values).reset_index()
+    train_durations = train[train['city_id'] != train['city_id'].shift(1)].groupby('utrip_id')['duration'].apply(lambda x: x.values).reset_index()
+    test_durations = test[test['city_id'] != test['city_id'].shift(1)].query('city_id!=0').groupby('duration')['city_id'].apply(lambda x: x.values).reset_index()
 
-    X_train = train.groupby('utrip_id')[categorical_cols + numerical_cols].last().reset_index()
-    X_test = test.query('city_id!=0').groupby('utrip_id')[categorical_cols + numerical_cols].last().reset_index()
+    X_train = train[train['city_id'] != train['city_id'].shift(1)].groupby('utrip_id')[categorical_cols + numerical_cols].last().reset_index()
+    X_test = test[test['city_id'] != test['city_id'].shift(1)].query('city_id!=0').groupby('utrip_id')[categorical_cols + numerical_cols].last().reset_index()
 
     X_train['city_id'] = train_trips['city_id']
     X_test['city_id'] = test_trips['city_id']
+    X_train['duration'] = train_durations['duration']
+    X_test['duration'] = test_durations['duration']
 
     X_train['n_trips'] = X_train['city_id'].map(lambda x: len(x))
     X_train = X_train.query('n_trips > 3').sort_values('n_trips').reset_index(drop=True)
@@ -113,6 +116,6 @@ if __name__ == '__main__':
                 scheduler=scheduler,
                 loaders=loaders,
                 logdir=logdir,
-                num_epochs=1,
+                num_epochs=3,
                 verbose=True,
             )

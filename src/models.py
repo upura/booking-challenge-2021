@@ -20,7 +20,7 @@ class BookingNN(nn.Module):
         self.emb_layers = nn.ModuleList([nn.Embedding(x, y) for x, y in emb_dims])
         self.embedding = nn.Embedding(vocab_size, emb_dim)
         self.dense_n = nn.Linear(1, 5)
-        self.rnn = nn.LSTM(input_size=emb_dim + sum([d[1] for d in emb_dims]) + 5,
+        self.rnn = nn.LSTM(input_size=emb_dim + sum([d[1] for d in emb_dims]) + 1,
                            hidden_size=rnn_dim,
                            num_layers=num_layers,
                            batch_first=True,
@@ -41,9 +41,10 @@ class BookingNN(nn.Module):
 
     def forward(self, x_seq, x_cat, x_num, h0=None):
         out_c = [emb_layer(x_cat[:, i]) for i, emb_layer in enumerate(self.emb_layers)]
-        out_c = torch.cat(out_c + [self.dense_n(x_num)], axis=1)
+        out_c = torch.cat(out_c, axis=1)
         out_c = out_c.repeat(x_seq.shape[1], 1, 1)
         out_c = out_c.view(out_c.shape[1], out_c.shape[0], out_c.shape[2])
-        out_s, hidden = self.rnn(torch.cat([self.drop(self.embedding(x_seq)), out_c], axis=2), h0)
+        out_n = x_num.reshape(x_num.shape[0], x_num.shape[1], 1)
+        out_s, hidden = self.rnn(torch.cat([self.drop(self.embedding(x_seq)), out_c, out_n], axis=2), h0)
         out_s = self.dense(self.drop(out_s.reshape(out_s.size(0) * out_s.size(1), out_s.size(2))))
         return out_s, hidden

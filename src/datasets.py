@@ -47,12 +47,12 @@ class BookingDataset:
     def __getitem__(self, i):
         x_seq = self.X['city_id'].values[i]
         x_cat = self.X[self.categorical_cols].iloc[i].values
-        x_num = self.X[self.numerical_cols].iloc[i].values
+        x_num = self.X['duration'].values[i]
         return (
             x_seq[:-1],
             x_seq[1:],
             x_cat,
-            x_num
+            x_num[:-1]
         ) if self.is_train else (
             x_seq,
             x_cat,
