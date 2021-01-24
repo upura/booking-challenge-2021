@@ -52,11 +52,11 @@ class BookingDataset:
             x_seq[:-1],
             x_seq[1:],
             x_cat,
-            x_num[:-1]
+            x_num[1:]
         ) if self.is_train else (
             x_seq,
             x_cat,
-            x_num
+            x_num[1:]
         )
 
 
@@ -81,6 +81,7 @@ class MyCollator(object):
             data = sequence.pad_sequences(data, maxlen=int(max_len))
         data = torch.tensor(data, dtype=torch.long)
         cats = torch.tensor(cats, dtype=torch.long)
+        nums = sequence.pad_sequences(nums, maxlen=int(max_len))
         nums = torch.tensor(nums, dtype=torch.float)
         if self.mode in ("train", "valid"):
             target = sequence.pad_sequences(target, maxlen=int(max_len))

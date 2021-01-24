@@ -1,5 +1,6 @@
 import gc
 
+import numpy as np
 import pandas as pd
 from sklearn.model_selection import StratifiedKFold
 from sklearn import preprocessing
@@ -27,7 +28,7 @@ if __name__ == '__main__':
         # 'device_class',
         # 'affiliate_id',
         'booker_country',
-        # 'hotel_country',
+        'hotel_country',
         'checkin_year',
         'checkin_month'
     ]
@@ -54,7 +55,7 @@ if __name__ == '__main__':
     train_trips = train[train['city_id'] != train['city_id'].shift(1)].groupby('utrip_id')['city_id'].apply(lambda x: x.values).reset_index()
     test_trips = test[test['city_id'] != test['city_id'].shift(1)].query('city_id!=0').groupby('utrip_id')['city_id'].apply(lambda x: x.values).reset_index()
     train_durations = train[train['city_id'] != train['city_id'].shift(1)].groupby('utrip_id')['duration'].apply(lambda x: x.values).reset_index()
-    test_durations = test[test['city_id'] != test['city_id'].shift(1)].query('city_id!=0').groupby('duration')['city_id'].apply(lambda x: x.values).reset_index()
+    test_durations = test[test['city_id'] != test['city_id'].shift(1)].groupby('duration')['city_id'].apply(lambda x: x.values).reset_index()
 
     X_train = train[train['city_id'] != train['city_id'].shift(1)].groupby('utrip_id')[categorical_cols + numerical_cols].last().reset_index()
     X_test = test[test['city_id'] != test['city_id'].shift(1)].query('city_id!=0').groupby('utrip_id')[categorical_cols + numerical_cols].last().reset_index()
@@ -116,6 +117,23 @@ if __name__ == '__main__':
                 scheduler=scheduler,
                 loaders=loaders,
                 logdir=logdir,
-                num_epochs=3,
+                num_epochs=10,
                 verbose=True,
             )
+
+            score = 0
+            y_val = X_val["city_id"].map(lambda x: x[-1])
+            for loop_i, prediction in enumerate(
+                runner.predict_loader(
+                    loader=valid_loader,
+                    resume=f'{logdir}/checkpoints/best.pth',
+                    model=model,
+                )
+            ):
+                correct = (
+                    y_val.values[loop_i]
+                    in np.argsort(prediction.cpu().numpy()[-1, :])[-4:]
+                )
+                score += int(correct)
+            score /= len(y_val)
+            print(f"val acc@4: {score}")
