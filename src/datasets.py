@@ -1,5 +1,4 @@
 from keras.preprocessing import sequence
-import numpy as np
 import pandas as pd
 import torch
 
@@ -34,143 +33,116 @@ def load_train_test():
     return pd.concat([train_set, test_set], sort=False)
 
 
-class BookingDataset:
-    def __init__(self, X, is_train=True, categorical_cols=[], numerical_cols=[]):
-        self.X = X
+class BookingDataset(torch.utils.data.Dataset):
+    def __init__(self, df: pd.DataFrame, is_train: bool = True) -> None:
+        super().__init__
         self.is_train = is_train
-        self.categorical_cols = categorical_cols
-        self.numerical_cols = numerical_cols
+        self.df = df
 
-    def __len__(self):
-        return len(self.X)
+    def __len__(self) -> int:
+        return len(self.df)
 
-    def __getitem__(self, i):
-        x_seq = self.X['city_id'].values[i]
-        x_cat = self.X[self.categorical_cols].iloc[i].values
-        x_num = self.X['duration'].values[i]
-        return (
-            x_seq[:-1],
-            x_seq[1:],
-            x_cat,
-            x_num[1:]
-        ) if self.is_train else (
-            x_seq,
-            x_cat,
-            x_num[1:]
-        )
+    def __getitem__(self, index: int):
+        city_id_tensor = self.df["past_city_id"].values[index]
+        booker_country_tensor = self.df["booker_country"].values[index]
+        device_class_tensor = self.df["device_class"].values[index]
+        affiliate_id_tensor = self.df["affiliate_id"].values[index]
+        target_tensor = self.df["city_id"].values[index][
+            -1
+        ]  # extrast last value of sequence
+        month_checkin_tensor = self.df["month_checkin"].values[index]
+        num_checkin_tensor = self.df["num_checkin"].values[index]
+        days_stay_tensor = self.df["days_stay"].values[index]
+        days_move_tensor = self.df["days_move"].values[index]
+        hotel_country_tensor = self.df["past_hotel_country"].values[index]
+
+        if self.is_train:
+            return (
+                city_id_tensor,
+                booker_country_tensor,
+                device_class_tensor,
+                affiliate_id_tensor,
+                month_checkin_tensor,
+                num_checkin_tensor,
+                days_stay_tensor,
+                days_move_tensor,
+                hotel_country_tensor,
+                target_tensor,
+            )
+        else:
+            return (
+                city_id_tensor,
+                booker_country_tensor,
+                device_class_tensor,
+                affiliate_id_tensor,
+                month_checkin_tensor,
+                num_checkin_tensor,
+                days_stay_tensor,
+                days_move_tensor,
+                hotel_country_tensor,
+            )
 
 
 class MyCollator(object):
-    def __init__(self, mode="train", percentile=100):
-        self.mode = mode
-        self.percentile = percentile
-
-    def __call__(self, batch):
-        if self.mode in ("train", "valid"):
-            data = [item[0] for item in batch]
-            target = [item[1] for item in batch]
-            cats = [item[2] for item in batch]
-            nums = [item[3] for item in batch]
-        else:
-            data = [item[0] for item in batch]
-            cats = [item[1] for item in batch]
-            nums = [item[2] for item in batch]
-        lens = [len(x) for x in data]
-        max_len = np.percentile(lens, self.percentile)
-        if self.mode in ("train"):
-            data = sequence.pad_sequences(data, maxlen=int(max_len))
-        data = torch.tensor(data, dtype=torch.long)
-        cats = torch.tensor(cats, dtype=torch.long)
-        nums = sequence.pad_sequences(nums, maxlen=int(max_len))
-        nums = torch.tensor(nums, dtype=torch.float)
-        if self.mode in ("train", "valid"):
-            target = sequence.pad_sequences(target, maxlen=int(max_len))
-            target = torch.tensor(target, dtype=torch.long)
-        return (
-            data,
-            target,
-            cats,
-            nums
-        ) if self.mode in ("train", "valid") else (
-            data,
-            cats,
-            nums
-        )
-
-
-class BookingDatasetMtl:
-    def __init__(self, X, is_train=True, categorical_cols=[], numerical_cols=[]):
-        self.X = X
+    def __init__(self, is_train=True):
         self.is_train = is_train
-        self.categorical_cols = categorical_cols
-        self.numerical_cols = numerical_cols
-
-    def __len__(self):
-        return len(self.X)
-
-    def __getitem__(self, i):
-        x_seq = self.X['city_id'].values[i]
-        x_htl = self.X['hotel_country'].values[i]
-        x_cat = self.X[self.categorical_cols].iloc[i].values
-        x_num = self.X['duration'].values[i]
-        return (
-            x_seq[:-1],
-            x_seq[1:],
-            x_htl[:-1],
-            x_htl[1:],
-            x_cat,
-            x_num[1:]
-        ) if self.is_train else (
-            x_seq,
-            x_htl,
-            x_cat,
-            x_num[1:]
-        )
-
-
-class MyCollatorMtl(object):
-    def __init__(self, mode="train", percentile=100):
-        self.mode = mode
-        self.percentile = percentile
 
     def __call__(self, batch):
-        if self.mode in ("train", "valid"):
-            data = [item[0] for item in batch]
-            target = [item[1] for item in batch]
-            data_h = [item[2] for item in batch]
-            target_h = [item[3] for item in batch]
-            cats = [item[4] for item in batch]
-            nums = [item[5] for item in batch]
-        else:
-            data = [item[0] for item in batch]
-            data_h = [item[1] for item in batch]
-            cats = [item[2] for item in batch]
-            nums = [item[3] for item in batch]
-        lens = [len(x) for x in data]
-        max_len = np.percentile(lens, self.percentile)
-        if self.mode in ("train"):
-            data = sequence.pad_sequences(data, maxlen=int(max_len))
-            data_h = sequence.pad_sequences(data_h, maxlen=int(max_len))
-        data = torch.tensor(data, dtype=torch.long)
-        data_h = torch.tensor(data_h, dtype=torch.long)
-        cats = torch.tensor(cats, dtype=torch.long)
-        nums = sequence.pad_sequences(nums, maxlen=int(max_len))
-        nums = torch.tensor(nums, dtype=torch.float)
-        if self.mode in ("train", "valid"):
-            target = sequence.pad_sequences(target, maxlen=int(max_len))
-            target = torch.tensor(target, dtype=torch.long)
-            target_h = sequence.pad_sequences(target_h, maxlen=int(max_len))
-            target_h = torch.tensor(target_h, dtype=torch.long)
+        city_id_tensor = [item[0] for item in batch]
+        booker_country_tensor = [item[1] for item in batch]
+        device_class_tensor = [item[2] for item in batch]
+        affiliate_id_tensor = [item[3] for item in batch]
+        month_checkin_tensor = [item[4] for item in batch]
+        num_checkin_tensor = [item[5] for item in batch]
+        days_stay_tensor = [item[6] for item in batch]
+        days_move_tensor = [item[7] for item in batch]
+        hotel_country_tensor = [item[8] for item in batch]
+        if self.is_train:
+            targets = [item[-1] for item in batch]
+
+        def _pad_sequences(data, maxlen: int, dtype=torch.long) -> torch.tensor:
+            data = sequence.pad_sequences(data, maxlen=maxlen)
+            return torch.tensor(data, dtype=dtype)
+
+        lens = [len(s) for s in city_id_tensor]
+        city_id_tensor = _pad_sequences(city_id_tensor, max(lens))
+        booker_country_tensor = _pad_sequences(booker_country_tensor, max(lens))
+        device_class_tensor = _pad_sequences(device_class_tensor, max(lens))
+        affiliate_id_tensor = _pad_sequences(affiliate_id_tensor, max(lens))
+        month_checkin_tensor = _pad_sequences(month_checkin_tensor, max(lens))
+        num_checkin_tensor = _pad_sequences(
+            num_checkin_tensor, max(lens), dtype=torch.float
+        )
+        days_stay_tensor = _pad_sequences(
+            days_stay_tensor, max(lens), dtype=torch.float
+        )
+        days_move_tensor = _pad_sequences(
+            days_move_tensor, max(lens), dtype=torch.float
+        )
+        hotel_country_tensor = _pad_sequences(hotel_country_tensor, max(lens))
+        if self.is_train:
+            targets = torch.tensor(targets, dtype=torch.long)
+            return (
+                city_id_tensor,
+                booker_country_tensor,
+                device_class_tensor,
+                affiliate_id_tensor,
+                month_checkin_tensor,
+                num_checkin_tensor,
+                days_stay_tensor,
+                days_move_tensor,
+                hotel_country_tensor,
+                targets,
+            )
+
         return (
-            data,
-            target,
-            data_h,
-            target_h,
-            cats,
-            nums
-        ) if self.mode in ("train", "valid") else (
-            data,
-            data_h,
-            cats,
-            nums
+            city_id_tensor,
+            booker_country_tensor,
+            device_class_tensor,
+            affiliate_id_tensor,
+            month_checkin_tensor,
+            num_checkin_tensor,
+            days_stay_tensor,
+            days_move_tensor,
+            hotel_country_tensor,
         )

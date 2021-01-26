@@ -3,112 +3,111 @@ from torch import nn
 
 
 class BookingNN(nn.Module):
-    def __init__(self,
-                 vocab_size,
-                 emb_dim=500,
-                 rnn_dim=500,
-                 num_layers=2,
-                 dropout=0.3,
-                 rnn_dropout=0.3,
-                 tie_weight=False):
+    def __init__(
+        self,
+        n_city_id,
+        n_booker_country,
+        n_device_class,
+        n_affiliate_id,
+        n_month_checkin,
+        n_hotel_country,
+        emb_dim=512,
+        rnn_dim=512,
+        hidden_size=512,
+        num_layers=2,
+        dropout=0.3,
+        rnn_dropout=0.3,
+    ):
         super().__init__()
         self.drop = nn.Dropout(dropout)
-        """
-        cat_dims = [int(train_test[col].nunique()) for col in categorical_cols]
-        emb_dims = [(x, min(50, (x + 1) // 2)) for x in cat_dims]
-        """
-        self.emb_layers = nn.ModuleList([nn.Embedding(x, y) for x, y in emb_dims])
-        self.embedding = nn.Embedding(vocab_size, emb_dim)
-        self.dense_n = nn.Linear(1, 5)
-        self.rnn = nn.LSTM(input_size=emb_dim + sum([d[1] for d in emb_dims]) + 1,
-                           hidden_size=rnn_dim,
-                           num_layers=num_layers,
-                           batch_first=True,
-                           dropout=rnn_dropout,
-                           bidirectional=True)
-        self.dense = nn.Linear(rnn_dim * 2, vocab_size)
+        self.city_id_embedding = nn.Embedding(n_city_id, emb_dim)
+        self.booker_country_embedding = nn.Embedding(n_booker_country, emb_dim)
+        self.device_class_embedding = nn.Embedding(n_device_class, emb_dim)
+        self.affiliate_id_embedding = nn.Embedding(n_affiliate_id, emb_dim)
+        self.month_checkin_embedding = nn.Embedding(n_month_checkin, emb_dim)
+        self.hotel_country_embedding = nn.Embedding(n_hotel_country, emb_dim)
 
-        if tie_weight:
-            self.dense.weight = self.embedding.weight
+        self.cate_proj = nn.Sequential(
+            nn.Linear(emb_dim * 6, hidden_size // 2),
+            nn.LayerNorm(hidden_size // 2),
+        )
+        self.cont_emb = nn.Sequential(
+            nn.Linear(3, hidden_size // 2),
+            nn.LayerNorm(hidden_size // 2),
+        )
 
-        self.vocab_size = vocab_size
+        self.lstm = nn.LSTM(
+            input_size=hidden_size,
+            hidden_size=hidden_size,
+            num_layers=num_layers,
+            dropout=rnn_dropout,
+            bidirectional=False,
+            batch_first=True,
+        )
+        self.ffn = nn.Sequential(
+            nn.Linear(hidden_size, hidden_size),
+            nn.LayerNorm(hidden_size),
+            nn.Dropout(dropout),
+            nn.ReLU(inplace=True),
+            nn.Linear(hidden_size, n_city_id),
+        )
+
+        self.n_city_id = n_city_id
+        self.n_booker_country = n_booker_country
         self.emb_dim = emb_dim
         self.rnn_dim = rnn_dim
         self.num_layers = num_layers
         self.dropout = dropout
         self.rnn_dropout = rnn_dropout
-        self.tie_weight = tie_weight
 
-    def forward(self, x_seq, x_cat, x_num, h0=None):
-        out_c = [emb_layer(x_cat[:, i]) for i, emb_layer in enumerate(self.emb_layers)]
-        out_c = torch.cat(out_c, axis=1)
-        out_c = out_c.repeat(x_seq.shape[1], 1, 1)
-        out_c = out_c.view(out_c.shape[1], out_c.shape[0], out_c.shape[2])
-        out_n = x_num.reshape(x_num.shape[0], x_num.shape[1], 1)
-        out_s, hidden = self.rnn(torch.cat([self.drop(self.embedding(x_seq)), out_c, out_n], axis=2), h0)
-        out_s = self.dense(self.drop(out_s.reshape(out_s.size(0) * out_s.size(1), out_s.size(2))))
-        return out_s, hidden
+    def forward(
+        self,
+        city_id_tensor,
+        booker_country_tensor,
+        device_class_tensor,
+        affiliate_id_tensor,
+        month_checkin_tensor,
+        num_checkin_tensor,
+        days_stay_tensor,
+        days_move_tensor,
+        hotel_country_tensor,
+    ):
+        city_id_embedding = self.city_id_embedding(city_id_tensor)
+        booker_country_embedding = self.booker_country_embedding(booker_country_tensor)
+        device_class_embedding = self.device_class_embedding(device_class_tensor)
+        affiliate_id_embedding = self.affiliate_id_embedding(affiliate_id_tensor)
+        month_checkin_embedding = self.month_checkin_embedding(month_checkin_tensor)
+        hotel_country_embedding = self.hotel_country_embedding(hotel_country_tensor)
+        num_checkin_feature = num_checkin_tensor.unsqueeze(2)
+        days_stay_feature = days_stay_tensor.unsqueeze(2)
+        days_move_feature = days_move_tensor.unsqueeze(2)
 
+        cate_emb = torch.cat(
+            [
+                city_id_embedding,
+                booker_country_embedding,
+                device_class_embedding,
+                affiliate_id_embedding,
+                month_checkin_embedding,
+                hotel_country_embedding,
+            ],
+            dim=2,
+        )
+        cate_emb = self.cate_proj(cate_emb)
 
-class BookingNNMtl(nn.Module):
-    def __init__(self,
-                 vocab_size,
-                 vocab_size_h,
-                 emb_dim=500,
-                 rnn_dim=500,
-                 num_layers=2,
-                 dropout=0.3,
-                 rnn_dropout=0.3,
-                 tie_weight=False):
-        super().__init__()
-        self.drop = nn.Dropout(dropout)
-        """
-        cat_dims = [int(train_test[col].nunique()) for col in categorical_cols]
-        emb_dims = [(x, min(50, (x + 1) // 2)) for x in cat_dims]
-        """
-        self.emb_layers = nn.ModuleList([nn.Embedding(x, y) for x, y in emb_dims])
+        cont_emb = torch.cat(
+            [
+                num_checkin_feature,
+                days_stay_feature,
+                days_move_feature,
+            ],
+            dim=2,
+        )
+        cont_emb = self.cont_emb(cont_emb)
 
-        self.embedding = nn.Embedding(vocab_size, emb_dim)
-        self.rnn = nn.LSTM(input_size=emb_dim + sum([d[1] for d in emb_dims]) + 1,
-                           hidden_size=rnn_dim,
-                           num_layers=num_layers,
-                           batch_first=True,
-                           dropout=rnn_dropout,
-                           bidirectional=True)
-        self.dense = nn.Linear(rnn_dim * 2, vocab_size)
+        out_s = torch.cat([cate_emb, cont_emb], dim=2)
 
-        self.embedding_h = nn.Embedding(vocab_size_h, emb_dim)
-        self.rnn_h = nn.LSTM(input_size=emb_dim + sum([d[1] for d in emb_dims]) + 1,
-                             hidden_size=rnn_dim,
-                             num_layers=num_layers,
-                             batch_first=True,
-                             dropout=rnn_dropout,
-                             bidirectional=True)
-        self.dense_h = nn.Linear(rnn_dim * 2, vocab_size_h)
-
-        if tie_weight:
-            self.dense.weight = self.embedding.weight
-
-        self.vocab_size = vocab_size
-        self.vocab_size_h = vocab_size_h
-        self.emb_dim = emb_dim
-        self.rnn_dim = rnn_dim
-        self.num_layers = num_layers
-        self.dropout = dropout
-        self.rnn_dropout = rnn_dropout
-        self.tie_weight = tie_weight
-
-    def forward(self, x_seq, x_htl, x_cat, x_num, h0=None):
-        out_c = [emb_layer(x_cat[:, i]) for i, emb_layer in enumerate(self.emb_layers)]
-        out_c = torch.cat(out_c, axis=1)
-        out_c = out_c.repeat(x_seq.shape[1], 1, 1)
-        out_c = out_c.view(out_c.shape[1], out_c.shape[0], out_c.shape[2])
-
-        out_n = x_num.reshape(x_num.shape[0], x_num.shape[1], 1)
-
-        out_s, hidden = self.rnn(torch.cat([self.drop(self.embedding(x_seq)), out_c, out_n], axis=2), h0)
-        out_s = self.dense(self.drop(out_s.reshape(out_s.size(0) * out_s.size(1), out_s.size(2))))
-
-        out_h, hidden = self.rnn_h(torch.cat([self.drop(self.embedding(x_htl)), out_c, out_n], axis=2), h0)
-        out_h = self.dense_h(self.drop(out_h.reshape(out_h.size(0) * out_h.size(1), out_h.size(2))))
-        return (out_s, out_h), hidden
+        out_s, _ = self.lstm(out_s)
+        out_s = out_s[:, -1, :]  # extrast last value of sequence
+        out_s = self.ffn(out_s)
+        return out_s
