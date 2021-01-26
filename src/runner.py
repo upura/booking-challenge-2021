@@ -16,6 +16,10 @@ class CustomRunner(Runner):
             days_stay_tensor,
             days_move_tensor,
             hotel_country_tensor,
+            num_visit_drop_duplicates_tensor,
+            num_visit_tensor,
+            num_visit_same_city_tensor,
+            num_stay_consecutively_tensor,
             y,
         ) = batch
         out = self.model(
@@ -28,6 +32,10 @@ class CustomRunner(Runner):
             days_stay_tensor,
             days_move_tensor,
             hotel_country_tensor,
+            num_visit_drop_duplicates_tensor,
+            num_visit_tensor,
+            num_visit_same_city_tensor,
+            num_stay_consecutively_tensor,
         )
         loss = self.criterion(out, y)
         accuracy01, accuracy04 = metrics.accuracy(out, y, topk=(1, 4))
@@ -42,7 +50,7 @@ class CustomRunner(Runner):
     @torch.no_grad()
     def predict_batch(self, batch):
         batch = any2device(batch, self.device)
-        if len(batch) == 9:
+        if len(batch) == 13:
             (
                 city_id_tensor,
                 booker_country_tensor,
@@ -53,8 +61,12 @@ class CustomRunner(Runner):
                 days_stay_tensor,
                 days_move_tensor,
                 hotel_country_tensor,
+                num_visit_drop_duplicates_tensor,
+                num_visit_tensor,
+                num_visit_same_city_tensor,
+                num_stay_consecutively_tensor,
             ) = batch
-        elif len(batch) == 10:
+        elif len(batch) == 14:
             (
                 city_id_tensor,
                 booker_country_tensor,
@@ -65,6 +77,10 @@ class CustomRunner(Runner):
                 days_stay_tensor,
                 days_move_tensor,
                 hotel_country_tensor,
+                num_visit_drop_duplicates_tensor,
+                num_visit_tensor,
+                num_visit_same_city_tensor,
+                num_stay_consecutively_tensor,
                 y,
             ) = batch
         else:
@@ -79,5 +95,9 @@ class CustomRunner(Runner):
             days_stay_tensor,
             days_move_tensor,
             hotel_country_tensor,
+            num_visit_drop_duplicates_tensor,
+            num_visit_tensor,
+            num_visit_same_city_tensor,
+            num_stay_consecutively_tensor,
         )
         return out

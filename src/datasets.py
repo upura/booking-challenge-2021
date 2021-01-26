@@ -55,6 +55,10 @@ class BookingDataset(torch.utils.data.Dataset):
         days_stay_tensor = self.df["days_stay"].values[index]
         days_move_tensor = self.df["days_move"].values[index]
         hotel_country_tensor = self.df["past_hotel_country"].values[index]
+        num_visit_drop_duplicates_tensor = self.df["num_visit_drop_duplicates"].values[index]
+        num_visit_tensor = self.df["num_visit"].values[index]
+        num_visit_same_city_tensor = self.df["num_visit_same_city"].values[index]
+        num_stay_consecutively_tensor = self.df["num_stay_consecutively"].values[index]
 
         if self.is_train:
             return (
@@ -67,6 +71,10 @@ class BookingDataset(torch.utils.data.Dataset):
                 days_stay_tensor,
                 days_move_tensor,
                 hotel_country_tensor,
+                num_visit_drop_duplicates_tensor,
+                num_visit_tensor,
+                num_visit_same_city_tensor,
+                num_stay_consecutively_tensor,
                 target_tensor,
             )
         else:
@@ -80,6 +88,10 @@ class BookingDataset(torch.utils.data.Dataset):
                 days_stay_tensor,
                 days_move_tensor,
                 hotel_country_tensor,
+                num_visit_drop_duplicates_tensor,
+                num_visit_tensor,
+                num_visit_same_city_tensor,
+                num_stay_consecutively_tensor,
             )
 
 
@@ -97,6 +109,10 @@ class MyCollator(object):
         days_stay_tensor = [item[6] for item in batch]
         days_move_tensor = [item[7] for item in batch]
         hotel_country_tensor = [item[8] for item in batch]
+        num_visit_drop_duplicates_tensor = [item[9] for item in batch]
+        num_visit_tensor = [item[10] for item in batch]
+        num_visit_same_city_tensor = [item[11] for item in batch]
+        num_stay_consecutively_tensor = [item[12] for item in batch]
         if self.is_train:
             targets = [item[-1] for item in batch]
 
@@ -120,6 +136,10 @@ class MyCollator(object):
             days_move_tensor, max(lens), dtype=torch.float
         )
         hotel_country_tensor = _pad_sequences(hotel_country_tensor, max(lens))
+        num_visit_drop_duplicates_tensor = _pad_sequences(num_visit_drop_duplicates_tensor, max(lens))
+        num_visit_tensor = _pad_sequences(num_visit_tensor, max(lens))
+        num_visit_same_city_tensor = _pad_sequences(num_visit_same_city_tensor, max(lens))
+        num_stay_consecutively_tensor = _pad_sequences(num_stay_consecutively_tensor, max(lens))
         if self.is_train:
             targets = torch.tensor(targets, dtype=torch.long)
             return (
@@ -132,6 +152,10 @@ class MyCollator(object):
                 days_stay_tensor,
                 days_move_tensor,
                 hotel_country_tensor,
+                num_visit_drop_duplicates_tensor,
+                num_visit_tensor,
+                num_visit_same_city_tensor,
+                num_stay_consecutively_tensor,
                 targets,
             )
 
@@ -145,4 +169,8 @@ class MyCollator(object):
             days_stay_tensor,
             days_move_tensor,
             hotel_country_tensor,
+            num_visit_drop_duplicates_tensor,
+            num_visit_tensor,
+            num_visit_same_city_tensor,
+            num_stay_consecutively_tensor,
         )

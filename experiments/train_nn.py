@@ -24,6 +24,10 @@ NUMERICAL_COLS = [
     "days_stay",
     "num_checkin",
     "days_move",
+    "num_visit_drop_duplicates",
+    "num_visit",
+    "num_visit_same_city",
+    "num_stay_consecutively"
 ]
 
 
@@ -79,6 +83,37 @@ if __name__ == '__main__':
     train_test["days_move"] = (
         (train_test["checkin"] - train_test["past_checkout"])
         .dt.days.fillna(0)
+        .apply(lambda x: np.log1p(x))
+    )
+
+    num_visit_drop_duplicates = (
+        train_test.query("city_id != 0")[["user_id", "city_id"]]
+        .drop_duplicates()
+        .groupby("city_id")
+        .size()
+        .apply(lambda x: np.log1p(x)).reset_index()
+    )
+    num_visit_drop_duplicates.columns = ["past_city_id", "num_visit_drop_duplicates"]
+    num_visit = train_test.query("city_id != 0")[["user_id", "city_id"]].groupby("city_id").size().apply(lambda x: np.log1p(x)).reset_index()
+    num_visit.columns = ["past_city_id", "num_visit"]
+    num_visit_same_city = (
+        train_test[train_test['city_id'] == train_test['city_id'].shift(1)]
+        .groupby("city_id")
+        .size()
+        .apply(lambda x: np.log1p(x))
+        .reset_index()
+    )
+    num_visit_same_city.columns = ["past_city_id", "num_visit_same_city"]
+    train_test = pd.merge(train_test, num_visit_drop_duplicates, on="past_city_id", how="left")
+    train_test = pd.merge(train_test, num_visit, on="past_city_id", how="left")
+    train_test = pd.merge(train_test, num_visit_same_city, on="past_city_id", how="left")
+    train_test["num_visit_drop_duplicates"].fillna(0, inplace=True)
+    train_test["num_visit"].fillna(0, inplace=True)
+    train_test["num_visit_same_city"].fillna(0, inplace=True)
+    train_test["num_stay_consecutively"] = (
+        train_test.groupby(["utrip_id", "past_city_id"])["past_city_id"]
+        .rank(method="first")
+        .fillna(1)
         .apply(lambda x: np.log1p(x))
     )
 
@@ -143,7 +178,8 @@ if __name__ == '__main__':
                 shuffle=False,
             )
 
-            loaders = {'train': train_loader, 'valid': valid_loader}
+            loaders = {'train': train_loader}
+            # loaders = {'train': train_loader, 'valid': valid_loader}
             runner = CustomRunner(device=device)
 
             model = BookingNN(
@@ -165,7 +201,7 @@ if __name__ == '__main__':
                 scheduler=scheduler,
                 loaders=loaders,
                 logdir=logdir,
-                num_epochs=10,
+                num_epochs=15,
                 verbose=True,
             )
 
