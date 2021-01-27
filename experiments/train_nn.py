@@ -33,7 +33,7 @@ NUMERICAL_COLS = [
 
 if __name__ == '__main__':
 
-    run_name = 'nn001'
+    run_name = 'nn003'
     seed_everything(0)
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 

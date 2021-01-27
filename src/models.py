@@ -1,3 +1,5 @@
+import gensim
+import numpy as np
 import torch
 from torch import nn
 
@@ -20,7 +22,10 @@ class BookingNN(nn.Module):
     ):
         super().__init__()
         self.drop = nn.Dropout(dropout)
-        self.city_id_embedding = nn.Embedding(n_city_id, emb_dim)
+        city_w2v = gensim.models.KeyedVectors.load_word2vec_format("../input/w2v/w2v_city.bin", binary=True)
+        city_vectors = np.array([city_w2v[str(idx)] if str(idx) in city_w2v.vocab.keys() else np.zeros(emb_dim) for idx in range(n_city_id)])
+        city_weights = torch.FloatTensor(city_vectors)
+        self.city_id_embedding = nn.Embedding.from_pretrained(city_weights)
         self.booker_country_embedding = nn.Embedding(n_booker_country, emb_dim)
         self.device_class_embedding = nn.Embedding(n_device_class, emb_dim)
         self.affiliate_id_embedding = nn.Embedding(n_affiliate_id, emb_dim)
