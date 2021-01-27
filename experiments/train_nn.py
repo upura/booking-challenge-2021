@@ -200,7 +200,7 @@ if __name__ == '__main__':
                 scheduler=scheduler,
                 loaders=loaders,
                 logdir=logdir,
-                num_epochs=12,
+                num_epochs=11,
                 verbose=True,
             )
 
@@ -215,6 +215,6 @@ if __name__ == '__main__':
                 logdir=logdir,
                 main_metric="accuracy04",
                 minimize_metric=False,
-                num_epochs=15,
+                num_epochs=14,
                 verbose=True,
             )
