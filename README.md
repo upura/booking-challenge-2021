@@ -75,3 +75,10 @@ python fe_w2v.py
 ```
 
 ![bookingnn](docs/scatter_city.png)
+
+## Training tips
+
+- Google Colab with GPU
+- Catalyst for PyTorch model training
+- Stratified split by the length of each trip
+- Use model with best validation score from epoch 11 to 14.
