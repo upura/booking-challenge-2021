@@ -46,3 +46,15 @@ from src.models import BookingNNMtl as BookingNN
 from src.utils import seed_everything
 from src.runner import CustomRunnerMtl as CustomRunner
 ```
+
+## Graph features
+
+We believe that graph related features are important because it can lead to reconstruct geographical information. Each sequence of trips are just a fragment of it.
+
+The following figure is a scatter plot of `city_id` vectors calculated by Word2Vec. The number of dimension is compressed by umap. Embedding vectors are used as weights in the model.
+
+```bash
+python fe_w2v.py
+```
+
+![bookingnn](docs/scatter_city.png)
