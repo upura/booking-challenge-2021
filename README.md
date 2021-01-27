@@ -13,7 +13,7 @@ There are three types of model.
 python train_nn.py
 ```
 
-![bookingnn](docs/booking_nn.png)
+![image](docs/booking_nn.png)
 
 - LSTM with categorical and numerical features.
 - Pretrained weights of `city_id` and `hotel_country` are calculated by Word2Vec.
@@ -33,7 +33,7 @@ from src.runner import CustomRunner
 python train_nn_mtl.py
 ```
 
-![bookingnn](docs/booking_nn_mtl.png)
+![image](docs/booking_nn_mtl.png)
 
 - Multi-task learning version BookingNN.
 - Predict not only `city_id` but also `hotel_country`.
@@ -74,7 +74,7 @@ The following figure is a scatter plot of `city_id` vectors calculated by Word2V
 python fe_w2v.py
 ```
 
-![bookingnn](docs/scatter_city.png)
+![image](docs/scatter_city.png)
 
 ## Training tips
 
