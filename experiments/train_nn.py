@@ -155,7 +155,7 @@ if __name__ == '__main__':
 
     for fold_id, (tr_idx, va_idx) in enumerate(cv.split(X_train,
                                                         pd.cut(X_train['n_trips'], 5, labels=False))):
-        if fold_id in (0,):
+        if fold_id in (0, 1, 2, 3, 4):
             X_tr = X_train.loc[tr_idx, :]
             X_val = X_train.loc[va_idx, :]
 
