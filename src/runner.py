@@ -139,7 +139,7 @@ class CustomRunnerMtl(Runner):
         )
         loss_s = self.criterion(out_s, y_s)
         loss_h = self.criterion(out_h, y_h)
-        loss = loss_s * 0.9 + loss_h * 0.1
+        loss = loss_s * 0.8 + loss_h * 0.2
         accuracy01, accuracy04 = metrics.accuracy(out_s, y_s, topk=(1, 4))
         self.batch_metrics.update(
             {"loss": loss, "accuracy01": accuracy01, "accuracy04": accuracy04}
