@@ -7,10 +7,12 @@ from sklearn.model_selection import StratifiedKFold
 from sklearn import preprocessing
 import torch
 
-from src.datasets import load_train_test, BookingDataset, MyCollator
-from src.models import BookingNN
+from src.datasets import load_train_test
+from src.datasets import BookingDatasetMtl as BookingDataset
+from src.datasets import MyCollatorMtl as MyCollator
+from src.models import BookingNNMtl as BookingNN
 from src.utils import seed_everything
-from src.runner import CustomRunner
+from src.runner import CustomRunnerMtl as CustomRunner
 
 
 CATEGORICAL_COLS = [
