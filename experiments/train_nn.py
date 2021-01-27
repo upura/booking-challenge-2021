@@ -178,10 +178,7 @@ if __name__ == '__main__':
                 shuffle=False,
             )
 
-            loaders = {'train': train_loader}
-            # loaders = {'train': train_loader, 'valid': valid_loader}
             runner = CustomRunner(device=device)
-
             model = BookingNN(
                 n_city_id=len(target_le.classes_),
                 n_booker_country=len(cat_le["booker_country"].classes_),
@@ -194,6 +191,8 @@ if __name__ == '__main__':
             optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
             scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=30, eta_min=1e-6)
             logdir = f'logdir_{run_name}/fold{fold_id}'
+
+            loaders = {'train': train_loader}
             runner.train(
                 model=model,
                 criterion=criterion,
@@ -201,23 +200,21 @@ if __name__ == '__main__':
                 scheduler=scheduler,
                 loaders=loaders,
                 logdir=logdir,
-                num_epochs=15,
+                num_epochs=12,
                 verbose=True,
             )
 
-            score = 0
-            y_val = X_val["city_id"].map(lambda x: x[-1])
-            for loop_i, prediction in enumerate(
-                runner.predict_loader(
-                    loader=valid_loader,
-                    resume=f'{logdir}/checkpoints/best.pth',
-                    model=model,
-                )
-            ):
-                correct = (
-                    y_val.values[loop_i]
-                    in np.argsort(prediction.cpu().numpy()[-1, :])[-4:]
-                )
-                score += int(correct)
-            score /= len(y_val)
-            print(f"val acc@4: {score}")
+            loaders = {'train': train_loader, 'valid': valid_loader}
+            runner.train(
+                model=model,
+                resume=f'{logdir}/checkpoints/best_full.pth',
+                criterion=criterion,
+                optimizer=optimizer,
+                scheduler=scheduler,
+                loaders=loaders,
+                logdir=logdir,
+                main_metric="accuracy04",
+                minimize_metric=False,
+                num_epochs=15,
+                verbose=True,
+            )

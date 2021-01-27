@@ -22,15 +22,22 @@ class BookingNN(nn.Module):
     ):
         super().__init__()
         self.drop = nn.Dropout(dropout)
+
         city_w2v = gensim.models.KeyedVectors.load_word2vec_format("../input/w2v/w2v_city.bin", binary=True)
         city_vectors = np.array([city_w2v[str(idx)] if str(idx) in city_w2v.vocab.keys() else np.zeros(emb_dim) for idx in range(n_city_id)])
         city_weights = torch.FloatTensor(city_vectors)
         self.city_id_embedding = nn.Embedding.from_pretrained(city_weights)
+
         self.booker_country_embedding = nn.Embedding(n_booker_country, emb_dim)
         self.device_class_embedding = nn.Embedding(n_device_class, emb_dim)
         self.affiliate_id_embedding = nn.Embedding(n_affiliate_id, emb_dim)
         self.month_checkin_embedding = nn.Embedding(n_month_checkin, emb_dim)
         self.hotel_country_embedding = nn.Embedding(n_hotel_country, emb_dim)
+
+        hotel_w2v = gensim.models.KeyedVectors.load_word2vec_format("../input/w2v/w2v_hotel.bin", binary=True)
+        hotel_vectors = np.array([hotel_w2v[str(idx)] if str(idx) in hotel_w2v.vocab.keys() else np.zeros(emb_dim) for idx in range(n_hotel_country)])
+        hotel_weights = torch.FloatTensor(hotel_vectors)
+        self.hotel_country_embedding = nn.Embedding.from_pretrained(hotel_weights)
 
         self.cate_proj = nn.Sequential(
             nn.Linear(emb_dim * 6, hidden_size // 2),
