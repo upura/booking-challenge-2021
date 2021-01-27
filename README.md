@@ -5,7 +5,7 @@ There are three types of model.
 
 1. BookingNN
 1. BookingNN with Multi-task learning
-1. BookingNN with Data augmentation
+1. BookingNN with Multi-task learning & Data augmentation
 
 ## BookingNN
 
@@ -45,6 +45,23 @@ from src.datasets import MyCollatorMtl as MyCollator
 from src.models import BookingNNMtl as BookingNN
 from src.utils import seed_everything
 from src.runner import CustomRunnerMtl as CustomRunner
+```
+
+## BookingNNAug
+
+Each sequence of trips can be flipped. Be sure to remove `booker_country` in order to keep consistency.
+
+```bash
+python train_nn_aug.py
+```
+
+```python
+from src.datasets import load_train_test
+from src.datasets import BookingDatasetAug as BookingDataset
+from src.datasets import MyCollatorAug as MyCollator
+from src.models import BookingNNAug as BookingNN
+from src.utils import seed_everything
+from src.runner import CustomRunnerAug as CustomRunner
 ```
 
 ## Graph features

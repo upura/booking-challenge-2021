@@ -7,14 +7,16 @@ from sklearn.model_selection import StratifiedKFold
 from sklearn import preprocessing
 import torch
 
-from src.datasets import load_train_test, BookingDataset, MyCollator
-from src.models import BookingNN
+from src.datasets import load_train_test
+from src.datasets import BookingDatasetAug as BookingDataset
+from src.datasets import MyCollatorAug as MyCollator
+from src.models import BookingNNAug as BookingNN
 from src.utils import seed_everything
-from src.runner import CustomRunner
+from src.runner import CustomRunnerAug as CustomRunner
 
 
 CATEGORICAL_COLS = [
-    "booker_country",
+    # "booker_country",
     "device_class",
     "affiliate_id",
     "month_checkin",
@@ -33,7 +35,7 @@ NUMERICAL_COLS = [
 
 if __name__ == '__main__':
 
-    run_name = 'nn003'
+    run_name = 'nn005'
     seed_everything(0)
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
@@ -129,7 +131,7 @@ if __name__ == '__main__':
     test = train_test[~train_test['row_num'].isnull()]
 
     X_train, X_test = [], []
-    for c in ["city_id", "past_city_id"] + CATEGORICAL_COLS + NUMERICAL_COLS:
+    for c in ["city_id", "hotel_country", "past_city_id"] + CATEGORICAL_COLS + NUMERICAL_COLS:
         X_train.append(train[train['city_id'] != train['city_id'].shift(1)].groupby("utrip_id")[c].apply(list))
         X_test.append(test[test['city_id'] != test['city_id'].shift(1)].groupby("utrip_id")[c].apply(list))
     X_train = pd.concat(X_train, axis=1)
@@ -159,6 +161,11 @@ if __name__ == '__main__':
             X_tr = X_train.loc[tr_idx, :]
             X_val = X_train.loc[va_idx, :]
 
+            X_aug = X_tr.copy()
+            for c in ["city_id", "hotel_country", "past_city_id"] + CATEGORICAL_COLS + NUMERICAL_COLS:
+                X_aug[c] = X_aug[c].map(lambda x: x[::-1])
+            X_tr = pd.concat([X_tr, X_aug], axis=0).sort_values('n_trips')
+
             train_dataset = BookingDataset(X_tr, is_train=True)
             valid_dataset = BookingDataset(X_val, is_train=True)
             train_loader = torch.utils.data.DataLoader(
@@ -181,7 +188,8 @@ if __name__ == '__main__':
             runner = CustomRunner(device=device)
             model = BookingNN(
                 n_city_id=len(target_le.classes_),
-                n_booker_country=len(cat_le["booker_country"].classes_),
+                n_hotel_id=len(hotel_le.classes_),
+                # n_booker_country=len(cat_le["booker_country"].classes_),
                 n_device_class=len(cat_le["device_class"].classes_),
                 n_affiliate_id=len(cat_le["affiliate_id"].classes_),
                 n_month_checkin=len(cat_le["month_checkin"].classes_),
