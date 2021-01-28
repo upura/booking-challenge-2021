@@ -205,7 +205,7 @@ if __name__ == '__main__':
             oof_preds[va_idx, :] = np.array(
                 list(
                     map(
-                        lambda x: x.cpu().numpy()[-1, :],
+                        lambda x: x[0].cpu().numpy()[-1, :],
                         runner.predict_loader(
                             loader=valid_loader,
                             resume=f"{logdir}/checkpoints/best.pth",
@@ -219,7 +219,7 @@ if __name__ == '__main__':
             test_preds_ = np.array(
                 list(
                     map(
-                        lambda x: x.cpu().numpy()[-1, :],
+                        lambda x: x[0].cpu().numpy()[-1, :],
                         runner.predict_loader(
                             loader=test_loader,
                             resume=f"{logdir}/checkpoints/best.pth",
@@ -229,8 +229,9 @@ if __name__ == '__main__':
                 )
             )
             test_preds += test_preds_ / cv.n_splits
-            np.save(f"{logdir}/y_test_pred_fold{fold_id}", test_preds_[va_idx, :])
+            np.save(f"{logdir}/y_test_pred_fold{fold_id}", test_preds_)
 
     np.save(f"{logdir}/y_oof_pred", oof_preds)
     np.save(f"{logdir}/y_test_pred", test_preds)
-    np.save(f"{logdir}/y_test_utrip_id{fold_id}", X_test["utrip_id"].values)
+    np.save(f"{logdir}/y_test_utrip_id", X_test["utrip_id"].values)
+    np.save(f"{logdir}/y_oof_utrip_id", X_train["utrip_id"].values)
