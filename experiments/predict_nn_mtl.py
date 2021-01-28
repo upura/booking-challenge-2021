@@ -205,7 +205,7 @@ if __name__ == '__main__':
             oof_preds[va_idx, :] = np.array(
                 list(
                     map(
-                        lambda x: x.cpu().numpy()[-1, :],
+                        lambda x: x[0].cpu().numpy()[-1, :],
                         runner.predict_loader(
                             loader=valid_loader,
                             resume=f"{logdir}/checkpoints/best.pth",
@@ -219,7 +219,7 @@ if __name__ == '__main__':
             test_preds_ = np.array(
                 list(
                     map(
-                        lambda x: x.cpu().numpy()[-1, :],
+                        lambda x: x[0].cpu().numpy()[-1, :],
                         runner.predict_loader(
                             loader=test_loader,
                             resume=f"{logdir}/checkpoints/best.pth",
