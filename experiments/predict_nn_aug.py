@@ -136,6 +136,8 @@ if __name__ == '__main__':
         X_test.append(test[test['city_id'] != test['city_id'].shift(1)].groupby("utrip_id")[c].apply(list))
     X_train = pd.concat(X_train, axis=1)
     X_test = pd.concat(X_test, axis=1)
+    X_train['utrip_id'] = train[train['city_id'] != train['city_id'].shift(1)].groupby("utrip_id")['utrip_id'].count().index
+    X_test['utrip_id'] = test[test['city_id'] != test['city_id'].shift(1)].groupby("utrip_id")['utrip_id'].count().index
 
     X_train['n_trips'] = X_train['city_id'].map(lambda x: len(x))
     X_train = X_train.query('n_trips > 2').sort_values('n_trips').reset_index(drop=True)
@@ -161,8 +163,11 @@ if __name__ == '__main__':
     for fold_id, (tr_idx, va_idx) in enumerate(cv.split(X_train,
                                                         pd.cut(X_train['n_trips'], 5, labels=False))):
         if fold_id in (0, 1, 2, 3, 4):
+            logdir = f'logdir_{run_name}/fold{fold_id}'
+
             X_tr = X_train.loc[tr_idx, :]
             X_val = X_train.loc[va_idx, :]
+            np.save(f"{logdir}/y_val_utrip_id{fold_id}", X_val["utrip_id"].values)
 
             X_aug = X_tr.copy()
             for c in ["city_id", "hotel_country", "past_city_id"] + CATEGORICAL_COLS + NUMERICAL_COLS:
@@ -201,7 +206,6 @@ if __name__ == '__main__':
             criterion = torch.nn.CrossEntropyLoss()
             optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
             scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=30, eta_min=1e-6)
-            logdir = f'logdir_{run_name}/fold{fold_id}'
 
             oof_preds[va_idx, :] = np.array(
                 list(
@@ -234,3 +238,4 @@ if __name__ == '__main__':
 
     np.save(f"{logdir}/y_oof_pred", oof_preds)
     np.save(f"{logdir}/y_test_pred", test_preds)
+    np.save(f"{logdir}/y_test_utrip_id{fold_id}", X_test["utrip_id"].values)
