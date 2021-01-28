@@ -7,6 +7,12 @@ There are three types of model.
 1. BookingNN with Multi-task learning
 1. BookingNN with Multi-task learning & Data augmentation
 
+| model | fold0 | fold1 | fold2 | fold3 | fold4 | average |
+| ---- | ---- | ---- | ---- | ---- | ---- | ---- |
+| BookingNN | 0.5083 | 0.4673 | 0.4728 | 0.4999 | 0.5154 | 0.49274 |
+| + Multi-task learning | 0.5086 | 0.4681 | 0.4747 | 0.5012 | 0.5162 | 0.49376 | 
+| + Data augmentation | 0.5029 | 0.4575 | 0.4661 | 0.4967 | 0.5082 | 0.48628 |
+
 ## BookingNN
 
 ```bash
