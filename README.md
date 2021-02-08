@@ -9,6 +9,7 @@ There are three types of model.
 
 | model | fold0 | fold1 | fold2 | fold3 | fold4 | average |
 | ---- | ---- | ---- | ---- | ---- | ---- | ---- |
+| Baseline | 0.4773 | 0.4388 | 0.4420 | 0.4731 | 0.4837 | 0.4629 |
 | BookingNN | 0.5083 | 0.4673 | 0.4728 | 0.4999 | 0.5154 | 0.49274 |
 | + Multi-task learning | 0.5086 | 0.4681 | 0.4747 | 0.5012 | 0.5162 | 0.49376 | 
 | + Data augmentation | 0.5029 | 0.4575 | 0.4661 | 0.4967 | 0.5082 | 0.48628 |
