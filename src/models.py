@@ -137,6 +137,84 @@ class BookingNN(nn.Module):
         return out_s
 
 
+class BookingNNBaseline(nn.Module):
+    def __init__(
+        self,
+        n_city_id,
+        n_booker_country,
+        n_device_class,
+        n_affiliate_id,
+        emb_dim=512,
+        rnn_dim=512,
+        hidden_size=512,
+        num_layers=2,
+        dropout=0.3,
+        rnn_dropout=0.3,
+    ):
+        super().__init__()
+        self.drop = nn.Dropout(dropout)
+
+        self.city_id_embedding = nn.Embedding(n_city_id, emb_dim)
+        self.booker_country_embedding = nn.Embedding(n_booker_country, emb_dim)
+        self.device_class_embedding = nn.Embedding(n_device_class, emb_dim)
+        self.affiliate_id_embedding = nn.Embedding(n_affiliate_id, emb_dim)
+
+        self.cate_proj = nn.Sequential(
+            nn.Linear(emb_dim * 4, hidden_size // 2),
+            nn.LayerNorm(hidden_size // 2),
+        )
+
+        self.lstm = nn.GRU(
+            input_size=(hidden_size // 2),
+            hidden_size=hidden_size,
+            num_layers=num_layers,
+            dropout=rnn_dropout,
+            batch_first=True,
+        )
+        self.ffn = nn.Sequential(
+            nn.Linear(hidden_size, hidden_size),
+            nn.LayerNorm(hidden_size),
+            nn.Dropout(dropout),
+            nn.ReLU(inplace=True),
+            nn.Linear(hidden_size, n_city_id),
+        )
+
+        self.n_city_id = n_city_id
+        self.n_booker_country = n_booker_country
+        self.emb_dim = emb_dim
+        self.rnn_dim = rnn_dim
+        self.num_layers = num_layers
+        self.dropout = dropout
+        self.rnn_dropout = rnn_dropout
+
+    def forward(
+        self,
+        city_id_tensor,
+        booker_country_tensor,
+        device_class_tensor,
+        affiliate_id_tensor,
+    ):
+        city_id_embedding = self.city_id_embedding(city_id_tensor)
+        booker_country_embedding = self.booker_country_embedding(booker_country_tensor)
+        device_class_embedding = self.device_class_embedding(device_class_tensor)
+        affiliate_id_embedding = self.affiliate_id_embedding(affiliate_id_tensor)
+
+        cate_emb = torch.cat(
+            [
+                city_id_embedding,
+                booker_country_embedding,
+                device_class_embedding,
+                affiliate_id_embedding,
+            ],
+            dim=2,
+        )
+        out_s = self.cate_proj(cate_emb)
+        out_s, _ = self.lstm(out_s)
+        out_s = out_s[:, -1, :]  # extrast last value of sequence
+        out_s = self.ffn(out_s)
+        return out_s
+
+
 class BookingNNMtl(nn.Module):
     def __init__(
         self,
