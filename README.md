@@ -1,18 +1,23 @@
-# Booking.com Data Challenge
-https://www.bookingchallenge.com/
+# Booking.com Data Challenge 6th Place Solution
 
-There are three types of model.
+This repository contains 6th place solution codes for [Booking.com Data Challenge](https://www.bookingchallenge.com/), which is a competition with a task of predicting travellers' next destination.
+We trained four types of Long short-term memory (LSTM) model, and archived the final score: 0.5399 by weighted averaging of these predictions.
+There are some differences in these models in feature engineering, multi-task learning, and data augumantation.
+Our experiments showed that the diversity of the models boosted the final result.
 
-1. BookingNN
-1. BookingNN with Multi-task learning
-1. BookingNN with Multi-task learning & Data augmentation
+Our solution is described in the submitted paper, and our code is available at [teammate's repository](https://github.com/hakubishin3/booking-challenge-2021) and here. In this repository, our baseline model and the models named LSTM 1-3 are avaliable.
+
+- Baseline
+- LSTM 1: BookingNN
+- LSTM 2: BookingNNMtl (LSTM 1 + Multi-task learning)
+- LSTM 3: BookingNNAug (LSTM 2 + Data augmentation)
 
 | model | fold0 | fold1 | fold2 | fold3 | fold4 | average |
 | ---- | ---- | ---- | ---- | ---- | ---- | ---- |
 | Baseline | 0.4773 | 0.4388 | 0.4420 | 0.4731 | 0.4837 | 0.4629 |
-| BookingNN | 0.5083 | 0.4673 | 0.4728 | 0.4999 | 0.5154 | 0.49274 |
-| + Multi-task learning | 0.5086 | 0.4681 | 0.4747 | 0.5012 | 0.5162 | 0.49376 | 
-| + Data augmentation | 0.5029 | 0.4575 | 0.4661 | 0.4967 | 0.5082 | 0.48628 |
+| LSTM 1 | 0.5083 | 0.4673 | 0.4728 | 0.4999 | 0.5154 | 0.49274 |
+| LSTM 2 | 0.5086 | 0.4681 | 0.4747 | 0.5012 | 0.5162 | 0.49376 | 
+| LSTM 3 | 0.5029 | 0.4575 | 0.4661 | 0.4967 | 0.5082 | 0.48628 |
 
 ## BookingNN
 
@@ -85,7 +90,13 @@ python fe_w2v.py
 
 ## Training tips
 
-- Google Colab with GPU
-- Catalyst for PyTorch model training
-- Stratified split by the length of each trip
+- Google Colab with GPU (runner.ipynb).
+- Catalyst for PyTorch model training.
+- Stratified split by the length of each trip.
 - Use model with best validation score from epoch 11 to 14.
+- You need to add `PYTHONPATH` as follows.
+
+```python
+import sys
+sys.path.append(YOUR_PROJECT_ROOT)
+```
