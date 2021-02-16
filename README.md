@@ -1,8 +1,8 @@
 # Booking.com Data Challenge 6th Place Solution
 
-This repository contains 6th place solution codes for [Booking.com Data Challenge](https://www.bookingchallenge.com/), which is a competition with a task of predicting travellers' next destination.
+This repository contains 6th place solution codes for [Booking.com Data Challenge](https://www.bookingchallenge.com/), which is a challenge with a task of predicting travellers' next destination.
 We trained four types of Long short-term memory (LSTM) model, and archived the final score: 0.5399 by weighted averaging of these predictions.
-There are some differences in these models in feature engineering, multi-task learning, and data augumantation.
+There are some differences in these models in feature engineering, multi-task learning, and data augmentation.
 Our experiments showed that the diversity of the models boosted the final result.
 
 Our solution is described in the submitted paper, and our code is available at [teammate's repository](https://github.com/hakubishin3/booking-challenge-2021) and here. In this repository, our baseline model and the models named LSTM 1-3 are avaliable.
